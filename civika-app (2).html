@@ -1,0 +1,1797 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIVIKA - Together, we able...</title>
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2D5A3D">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="CIVIKA">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="CIVIKA - Plateforme panafricaine collaborative pour connecter et renforcer les OSC">
+    <meta name="keywords" content="OSC, Afrique, société civile, collaboration, développement">
+    <meta name="author" content="CIVIKA Team">
+    <meta property="og:title" content="CIVIKA - Together, we able...">
+    <meta property="og:description" content="La première plateforme panafricaine pour les OSC">
+    <meta property="og:type" content="website">
+    
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-orange: #FF6B35;
+            --primary-green: #2D5A3D;
+            --accent-green: #4A7C59;
+            --text-dark: #2C3E50;
+            --text-light: #7F8C8D;
+            --bg-light: #F8FAFC;
+            --white: #FFFFFF;
+            --shadow: 0 4px 20px rgba(0,0,0,0.1);
+            --border-radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header & Navigation */
+        .header {
+            background: var(--white);
+            box-shadow: var(--shadow);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text-dark);
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-orange));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .logo-icon::before {
+            content: '🌍';
+            font-size: 24px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-dark);
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .nav-links a:hover {
+            background: var(--primary-orange);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .nav-links a.active {
+            background: var(--primary-green);
+            color: white;
+        }
+
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius);
+            text-decoration: none;
+            font-weight: 600;
+            transition: var(--transition);
+            cursor: pointer;
+            border: none;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-orange), #FF8C42);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--primary-green);
+            border: 2px solid var(--primary-green);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary-green);
+            color: white;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-top: 80px;
+            min-height: calc(100vh - 80px);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--primary-green), var(--accent-green));
+            color: white;
+            padding: 4rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="3" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            from { transform: translateX(-100px); }
+            to { transform: translateX(100vw); }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, white, #FFE5D9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero .tagline {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            font-style: italic;
+        }
+
+        .hero .description {
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin-bottom: 3rem;
+            line-height: 1.8;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 3rem;
+            margin-top: 3rem;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary-orange);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            background: white;
+            padding: 0;
+            margin: 0;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 80px;
+            z-index: 999;
+        }
+
+        .nav-tabs .container {
+            display: flex;
+            gap: 0;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 1rem 2rem;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: var(--transition);
+            border-bottom: 3px solid transparent;
+        }
+
+        .nav-tab:hover {
+            background: var(--bg-light);
+            color: var(--text-dark);
+        }
+
+        .nav-tab.active {
+            color: var(--primary-orange);
+            border-bottom-color: var(--primary-orange);
+            background: var(--bg-light);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 4rem 0;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Dashboard Section */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+        }
+
+        .dashboard-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-select, .search-input {
+            padding: 0.75rem 1rem;
+            border: 2px solid #E2E8F0;
+            border-radius: var(--border-radius);
+            background: white;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: var(--transition);
+            min-width: 150px;
+        }
+
+        .search-input {
+            cursor: text;
+            min-width: 200px;
+        }
+
+        .filter-select:focus, .search-input:focus {
+            outline: none;
+            border-color: var(--primary-orange);
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .map-container {
+            background: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        .map {
+            height: 500px;
+            width: 100%;
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .map-control-btn {
+            background: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .map-control-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .stats-panel {
+            background: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 1.5rem;
+            background: var(--bg-light);
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary-orange);
+        }
+
+        .recent-activities {
+            background: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid #F1F5F9;
+            transition: var(--transition);
+        }
+
+        .activity-item:hover {
+            background: var(--bg-light);
+            margin: 0 -1rem;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-orange));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .activity-time {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        /* OSC Cards */
+        .section-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 1rem;
+        }
+
+        .section-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-light);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .osc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .osc-card {
+            background: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .osc-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .osc-card-header {
+            padding: 2rem;
+            background: linear-gradient(135deg, var(--primary-green), var(--accent-green));
+            color: white;
+            position: relative;
+        }
+
+        .osc-card-header::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: white;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .online-indicator {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 12px;
+            height: 12px;
+            background: #10B981;
+            border-radius: 50%;
+            border: 2px solid white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .osc-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .osc-location {
+            opacity: 0.9;
+            margin-bottom: 1rem;
+        }
+
+        .osc-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .osc-tag {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .osc-card-body {
+            padding: 2rem;
+        }
+
+        .osc-description {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+            line-height: 1.7;
+        }
+
+        .osc-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+
+        .osc-stat {
+            text-align: center;
+        }
+
+        .osc-stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-orange);
+        }
+
+        .osc-stat-label {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-top: 0.25rem;
+        }
+
+        .osc-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary-orange);
+            color: var(--primary-orange);
+            flex: 1;
+        }
+
+        .btn-outline:hover {
+            background: var(--primary-orange);
+            color: white;
+        }
+
+        /* Messaging System */
+        .messaging-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+            height: 600px;
+        }
+
+        .contacts-list {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .contacts-header {
+            background: var(--primary-green);
+            color: white;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .contact-search {
+            width: 100%;
+            padding: 0.75rem;
+            border: none;
+            border-bottom: 1px solid #E2E8F0;
+            font-size: 0.9rem;
+        }
+
+        .contact-item {
+            padding: 1rem;
+            border-bottom: 1px solid #F1F5F9;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .contact-item:hover, .contact-item.active {
+            background: var(--bg-light);
+        }
+
+        .contact-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-orange));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .contact-info h4 {
+            font-size: 0.95rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .contact-info p {
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: var(--primary-green);
+            color: white;
+            padding: 1.5rem;
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .message.sent {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-orange));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .message-content {
+            max-width: 70%;
+        }
+
+        .message-bubble {
+            background: var(--bg-light);
+            padding: 0.75rem 1rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 0.25rem;
+        }
+
+        .message.sent .message-bubble {
+            background: var(--primary-orange);
+            color: white;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            color: var(--text-light);
+            padding: 0 0.5rem;
+        }
+
+        .chat-input {
+            padding: 1rem;
+            border-top: 1px solid #E2E8F0;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid #E2E8F0;
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+        }
+
+        .chat-input button {
+            padding: 0.75rem 1.5rem;
+            background: var(--primary-orange);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .chat-input button:hover {
+            background: #e55a2b;
+        }
+
+        /* Resources Section */
+        .resources-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .resource-card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 2rem;
+            transition: var(--transition);
+        }
+
+        .resource-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+        }
+
+        .resource-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: var(--border-radius);
+            background: linear-gradient(135deg, var(--primary-orange), #FF8C42);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .resource-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 1rem;
+        }
+
+        .resource-description {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .resource-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        /* Groups Section */
+        .groups-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .group-card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .group-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+        }
+
+        .group-header {
+            background: linear-gradient(135deg, var(--accent-green), var(--primary-green));
+            color: white;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .group-members-count {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .group-body {
+            padding: 2rem;
+        }
+
+        .group-stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 1.5rem 0;
+            padding: 1rem 0;
+            border-top: 1px solid #F1F5F9;
+            border-bottom: 1px solid #F1F5F9;
+        }
+
+        .group-stat {
+            text-align: center;
+        }
+
+        .group-stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-orange);
+        }
+
+        .group-stat-label {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-top: 0.25rem;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            animation: modalSlideIn 0.3s ease;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-light);
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            background: var(--bg-light);
+            color: var(--text-dark);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #E2E8F0;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary-orange);
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .messaging-container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            
+            .contacts-list {
+                max-height: 300px;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .mobile-menu-toggle {
+                display: block;
+            }
+            
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero-stats {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .nav-tabs .container {
+                overflow-x: auto;
+            }
+            
+            .nav-tab {
+                white-space: nowrap;
+                min-width: 150px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 15px;
+            }
+            
+            .hero {
+                padding: 2rem 0;
+            }
+            
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .osc-grid, .resources-grid, .groups-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .auth-buttons {
+                display: none;
+            }
+            
+            .filter-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-select, .search-input {
+                min-width: auto;
+            }
+        }
+
+        /* Loading States */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 107, 53, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary-orange);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Offline Indicator */
+        .offline-indicator {
+            position: fixed;
+            top: 80px;
+            left: 0;
+            right: 0;
+            background: #EF4444;
+            color: white;
+            text-align: center;
+            padding: 0.75rem;
+            z-index: 999;
+            display: none;
+        }
+
+        .offline-indicator.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); }
+            to { transform: translateY(0); }
+        }
+
+        /* Notification Styles */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            z-index: 3000;
+            animation: slideInRight 0.3s ease;
+            max-width: 400px;
+        }
+
+        .notification.success {
+            background: #10B981;
+            color: white;
+        }
+
+        .notification.error {
+            background: #EF4444;
+            color: white;
+        }
+
+        .notification.info {
+            background: #3B82F6;
+            color: white;
+        }
+
+        .notification.warning {
+            background: #F59E0B;
+            color: white;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+
+        /* Smooth Scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Animation utilities */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .fade-in {
+            opacity: 0;
+            animation: fadeIn 0.6s ease forwards;
+        }
+
+        .fade-in-up {
+            opacity: 0;
+            animation: fadeInUp 0.6s ease forwards;
+        }
+    </style>
+</head>
+<body>
+    <!-- Offline Indicator -->
+    <div id="offlineIndicator" class="offline-indicator">
+        <i class="fas fa-wifi"></i> Mode hors ligne - Certaines fonctionnalités sont limitées
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <nav class="nav">
+                <div class="logo">
+                    <div class="logo-icon"></div>
+                    <span>CIVIKA</span>
+                </div>
+                <ul class="nav-links" id="navLinks">
+                    <li><a href="#dashboard" onclick="showTab('dashboard')">Tableau de bord</a></li>
+                    <li><a href="#osc" onclick="showTab('osc')">OSC</a></li>
+                    <li><a href="#messaging" onclick="showTab('messaging')">Messages</a></li>
+                    <li><a href="#resources" onclick="showTab('resources')">Ressources</a></li>
+                    <li><a href="#groups" onclick="showTab('groups')">Groupes</a></li>
+                </ul>
+                <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="auth-buttons" id="authButtons">
+                    <button class="btn btn-secondary" onclick="openModal('loginModal')">
+                        <i class="fas fa-sign-in-alt"></i> Connexion
+                    </button>
+                    <button class="btn btn-primary" onclick="openModal('registerModal')">
+                        <i class="fas fa-user-plus"></i> Rejoindre
+                    </button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="container">
+                <div class="hero-content">
+                    <h1>CIVIKA</h1>
+                    <p class="tagline">Together, we able...</p>
+                    <p class="description">
+                        La première plateforme panafricaine collaborative qui connecte, renforce et valorise 
+                        les Organisations de la Société Civile à travers tout le continent africain.
+                    </p>
+                    <button class="btn btn-primary" onclick="showTab('dashboard')">
+                        <i class="fas fa-rocket"></i> Explorer la plateforme
+                    </button>
+                    
+                    <div class="hero-stats">
+                        <div class="stat">
+                            <span class="stat-number" data-target="1250">0</span>
+                            <span class="stat-label">OSC connectées</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number" data-target="54">0</span>
+                            <span class="stat-label">Pays africains</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number" data-target="847">0</span>
+                            <span class="stat-label">Projets collaboratifs</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <div class="container">
+                <button class="nav-tab active" onclick="showTab('dashboard')">
+                    <i class="fas fa-tachometer-alt"></i> Tableau de bord
+                </button>
+                <button class="nav-tab" onclick="showTab('osc')">
+                    <i class="fas fa-users"></i> OSC
+                </button>
+                <button class="nav-tab" onclick="showTab('messaging')">
+                    <i class="fas fa-comments"></i> Messages
+                </button>
+                <button class="nav-tab" onclick="showTab('resources')">
+                    <i class="fas fa-book-open"></i> Ressources
+                </button>
+                <button class="nav-tab" onclick="showTab('groups')">
+                    <i class="fas fa-layer-group"></i> Groupes
+                </button>
+            </div>
+        </nav>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="container">
+                <div class="dashboard-header">
+                    <h2 class="dashboard-title">Tableau de bord interactif</h2>
+                    <div class="filter-controls">
+                        <input type="text" class="search-input" placeholder="🔍 Rechercher une OSC..." id="searchInput">
+                        <select class="filter-select" id="countryFilter">
+                            <option value="">Tous les pays</option>
+                            <option value="senegal">Sénégal</option>
+                            <option value="cameroon">Cameroun</option>
+                            <option value="ghana">Ghana</option>
+                            <option value="kenya">Kenya</option>
+                            <option value="nigeria">Nigeria</option>
+                            <option value="mali">Mali</option>
+                        </select>
+                        <select class="filter-select" id="sectorFilter">
+                            <option value="">Tous les secteurs</option>
+                            <option value="education">Éducation</option>
+                            <option value="health">Santé</option>
+                            <option value="environment">Environnement</option>
+                            <option value="rights">Droits humains</option>
+                            <option value="gender">Genre</option>
+                            <option value="youth">Jeunesse</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="map-container">
+                        <div class="map-controls">
+                            <button class="map-control-btn" onclick="toggleMapLayer('osc')" title="OSC">
+                                <i class="fas fa-users"></i>
+                            </button>
+                            <button class="map-control-btn" onclick="toggleMapLayer('projects')" title="Projets">
+                                <i class="fas fa-project-diagram"></i>
+                            </button>
+                            <button class="map-control-btn" onclick="resetMapView()" title="Reset">
+                                <i class="fas fa-home"></i>
+                            </button>
+                        </div>
+                        <div id="map" class="map"></div>
+                    </div>
+
+                    <div class="sidebar">
+                        <div class="stats-panel">
+                            <h3 style="margin-bottom: 2rem; color: var(--text-dark);">
+                                <i class="fas fa-chart-bar"></i> Statistiques en temps réel
+                            </h3>
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                    <div class="stat-number">1,250</div>
+                                    <div class="stat-label">OSC actives</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-project-diagram"></i>
+                                    </div>
+                                    <div class="stat-number">847</div>
+                                    <div class="stat-label">Projets</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-handshake"></i>
+                                    </div>
+                                    <div class="stat-number">423</div>
+                                    <div class="stat-label">Partenariats</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-heart"></i>
+                                    </div>
+                                    <div class="stat-number">2.1M</div>
+                                    <div class="stat-label">Bénéficiaires</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="recent-activities">
+                            <h3 style="margin-bottom: 1.5rem; color: var(--text-dark);">
+                                <i class="fas fa-clock"></i> Activités récentes
+                            </h3>
+                            <div id="activitiesList">
+                                <!-- Activities will be loaded dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- OSC Tab -->
+        <div id="osc" class="tab-content">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">OSC en vedette</h2>
+                    <p class="section-subtitle">
+                        Découvrez les organisations qui font la différence à travers l'Afrique
+                    </p>
+                </div>
+
+                <div class="osc-grid" id="oscGrid">
+                    <!-- OSC cards will be loaded dynamically -->
+                </div>
+
+                <div style="text-align: center; margin-top: 3rem;">
+                    <button class="btn btn-primary" onclick="loadMoreOSC()">
+                        <span id="loadMoreText">Voir plus d'OSC</span>
+                        <span id="loadMoreSpinner" class="loading" style="display: none; margin-left: 10px;"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messaging Tab -->
+        <div id="messaging" class="tab-content">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Messagerie collaborative</h2>
+                    <p class="section-subtitle">
+                        Communiquez directement avec les autres OSC et développez vos partenariats
+                    </p>
+                </div>
+
+                <div class="messaging-container">
+                    <div class="contacts-list">
+                        <div class="contacts-header">
+                            <h3><i class="fas fa-address-book"></i> Contacts</h3>
+                        </div>
+                        <input type="text" class="contact-search" placeholder="🔍 Rechercher un contact...">
+                        <div id="contactsList">
+                            <!-- Contacts will be loaded dynamically -->
+                        </div>
+                    </div>
+
+                    <div class="chat-container">
+                        <div class="chat-header">
+                            <h3 id="chatTitle">Sélectionnez une conversation</h3>
+                        </div>
+                        <div class="chat-messages" id="chatMessages">
+                            <div style="text-align: center; padding: 3rem; color: var(--text-light);">
+                                <i class="fas fa-comments" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                                <p>Sélectionnez un contact pour commencer une conversation</p>
+                            </div>
+                        </div>
+                        <div class="chat-input" id="chatInputContainer" style="display: none;">
+                            <input type="text" placeholder="Tapez votre message..." id="messageInput">
+                            <button onclick="sendMessage()">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resources Tab -->
+        <div id="resources" class="tab-content">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Ressourcerie collaborative</h2>
+                    <p class="section-subtitle">
+                        Accédez à des guides, outils et formations pour renforcer votre organisation
+                    </p>
+                </div>
+
+                <div style="margin-bottom: 3rem; text-align: center;">
+                    <button class="btn btn-primary" onclick="openModal('addResourceModal')">
+                        <i class="fas fa-plus"></i> Ajouter une ressource
+                    </button>
+                </div>
+
+                <div class="resources-grid" id="resourcesGrid">
+                    <!-- Resources will be loaded dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Groups Tab -->
+        <div id="groups" class="tab-content">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Groupes thématiques</h2>
+                    <p class="section-subtitle">
+                        Rejoignez des communautés spécialisées et collaborez sur des projets communs
+                    </p>
+                </div>
+
+                <div style="margin-bottom: 3rem; text-align: center;">
+                    <button class="btn btn-primary" onclick="openModal('createGroupModal')">
+                        <i class="fas fa-plus"></i> Créer un groupe
+                    </button>
+                </div>
+
+                <div class="groups-grid" id="groupsGrid">
+                    <!-- Groups will be loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('loginModal')">&times;</button>
+            <h2 style="margin-bottom: 2rem; color: var(--text-dark);">
+                <i class="fas fa-sign-in-alt"></i> Connexion
+            </h2>
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label" for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="loginPassword">Mot de passe</label>
+                    <input type="password" id="loginPassword" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                        <input type="checkbox" id="rememberMe">
+                        Se souvenir de moi
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    <i class="fas fa-sign-in-alt"></i> Se connecter
+                </button>
+            </form>
+            <p style="text-align: center; margin-top: 1rem; color: var(--text-light);">
+                Pas encore de compte ? 
+                <a href="#" onclick="closeModal('loginModal'); openModal('registerModal')" 
+                   style="color: var(--primary-orange);">S'inscrire</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('registerModal')">&times;</button>
+            <h2 style="margin-bottom: 2rem; color: var(--text-dark);">
+                <i class="fas fa-user-plus"></i> Rejoindre CIVIKA
+            </h2>
+            <form onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label class="form-label" for="registerName">Nom de l'organisation</label>
+                    <input type="text" id="registerName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="registerCountry">Pays</label>
+                    <select id="registerCountry" class="form-select" required>
+                        <option value="">Sélectionner un pays</option>
+                        <option value="senegal">Sénégal</option>
+                        <option value="cameroon">Cameroun</option>
+                        <option value="ghana">Ghana</option>
+                        <option value="kenya">Kenya</option>
+                        <option value="nigeria">Nigeria</option>
+                        <option value="mali">Mali</option>
+                        <option value="burkina">Burkina Faso</option>
+                        <option value="cote-ivoire">Côte d'Ivoire</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="registerSector">Secteur d'activité</label>
+                    <select id="registerSector" class="form-select" required>
+                        <option value="">Sélectionner un secteur</option>
+                        <option value="education">Éducation</option>
+                        <option value="health">Santé</option>
+                        <option value="environment">Environnement</option>
+                        <option value="rights">Droits humains</option>
+                        <option value="gender">Genre</option>
+                        <option value="youth">Jeunesse</option>
+                        <option value="agriculture">Agriculture</option>
+                        <option value="technology">Technologie</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="registerDescription">Description courte</label>
+                    <textarea id="registerDescription" class="form-textarea" 
+                              placeholder="Décrivez brièvement votre organisation..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="registerPassword">Mot de passe</label>
+                    <input type="password" id="registerPassword" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.9rem;">
+                        <input type="checkbox" required style="margin-top: 0.25rem;">
+                        J'accepte les conditions d'utilisation et la politique de confidentialité
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    <i class="fas fa-user-plus"></i> Créer un compte
+                </button>
+            </form>
+            <p style="text-align: center; margin-top: 1rem; color: var(--text-light);">
+                Déjà un compte ? 
+                <a href="#" onclick="closeModal('registerModal'); openModal('loginModal')" 
+                   style="color: var(--primary-orange);">Se connecter</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Add Resource Modal -->
+    <div id="addResourceModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('addResourceModal')">&times;</button>
+            <h2 style="margin-bottom: 2rem; color: var(--text-dark);">
+                <i class="fas fa-plus"></i> Ajouter une ressource
+            </h2>
+            <form onsubmit="handleAddResource(event)">
+                <div class="form-group">
+                    <label class="form-label" for="resourceTitle">Titre de la ressource</label>
+                    <input type="text" id="resourceTitle" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="resourceCategory">Catégorie</label>
+                    <select id="resourceCategory" class="form-select" required>
+                        <option value="">Sélectionner une catégorie</option>
+                        <option value="guide">Guide pratique</option>
+                        <option value="template">Modèle/Template</option>
+                        <option value="training">Formation</option>
+                        <option value="tool">Outil</option>
+                        <option value="research">Recherche</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="resourceDescription">Description</label>
+                    <textarea id="resourceDescription" class="form-textarea" required
+                              placeholder="Décrivez le contenu et l'utilité de cette ressource..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="resourceFile">Fichier (optionnel)</label>
+                    <input type="file" id="resourceFile" class="form-input" 
+                           accept=".pdf,.doc,.docx,.ppt,.pptx">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="resourceUrl">URL externe (optionnel)</label>
+                    <input type="url" id="resourceUrl" class="form-input" 
+                           placeholder="https://exemple.com/ressource">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    <i class="fas fa-save"></i> Ajouter la ressource
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Group Modal -->
+    <div id="createGroupModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('createGroupModal')">&times;</button>
+            <h2 style="margin-bottom: 2rem; color: var(--text-dark);">
+                <i class="fas fa-plus"></i> Créer un groupe
+            </h2>
+            <form onsubmit="handleCreateGroup(event)">
+                <div class="form-group">
+                    <label class="form-label" for="groupName">Nom du groupe</label>
+                    <input type="text" id="groupName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="groupTheme">Thématique</label>
+                    <select id="groupTheme" class="form-select" required>
+                        <option value="">Sélectionner une thématique</option>
+                        <option value="education">Éducation</option>
+                        <option value="health">Santé</option>
+                        <option value="environment">Environnement</option>
+                        <option value="rights">Droits humains</option>
+                        <option value="gender">Genre et autonomisation</option>
+                        <option value="youth">Jeunesse et emploi</option>
+                        <option value="agriculture">Agriculture durable</option>
+                        <option value="technology">Innovation technologique</option>
+                        <option value="governance">Gouvernance</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="groupDescription">Description du groupe</label>
+                    <textarea id="groupDescription" class="form-textarea" required
+                              placeholder="Décrivez les objectifs et activités du groupe..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="groupType">Type de groupe</label>
+                    <select id="groupType" class="form-select" required>
+                        <option value="">Sélectionner un type</option>
+                        <option value="public">Public - Ouvert à tous</option>
+                        <option value="private">Privé - Sur invitation uniquement</option>
+                        <option value="regional">Régional - Limité à une région</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    <i class="fas fa-plus"></i> Créer le groupe
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let map;
+        let oscMarkers = [];
+        let projectMarkers = [];
+        let currentUser = null;
+        let currentChat = null;
+        let isOnline = navigator.onLine;
+        let socket = null;
+
+        // Sample data
+        const sampleOSCs = [
+            {
+                id: 1,
+                name: "Éducation pour Tous - Sénégal",
+                location: "Dakar, Sénégal",
+                lat: 14.6937,
+                lng: -17.4441,
+                country: "senegal",
+                sector: "education",
+                description: "Organisation dédiée à l'amélioration de l'accès à l'éducation de qualité pour les enfants défavorisés au Sénégal.",
+                projects: 15,
+                beneficiaries: 2500,
+                partners: 8,
+                online: true,
+                tags: ["Éducation", "Jeunesse", "Formation"]
+            },
+            {
+                id: 2,
+                name: "Santé Communautaire - Ghana",
+                location: "Accra, Ghana",
+                lat: 5.6037,
+                lng: -0.1870,
+                country: "ghana",
+                sector: "health",
+                description: "Amélioration de l'accès aux soins de santé primaires dans les communautés rurales du Ghana.",
+                projects: 22,
+                beneficiaries: 4800,
+                partners: 12,
+                online: true,
+                tags: ["Santé", "Communauté", "Prévention"]
+            },
+            {
+                id: 3,
+                name: "Environnement Durable - Kenya",
+                location: "Nairobi, Kenya",
+                lat: -1.2921,
+                lng: 36.8219,
+                country: "kenya",
+                sector: "environment",
+                description: "Protection de l'environnement et promotion du développement durable au Kenya et dans la région de l'Afrique de l'Est.",
+                projects: 18,
+                beneficiaries: 3200,
+                partners: 15,
+                online: false,
+                tags: ["Environnement", "Durabilité", "
